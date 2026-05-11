@@ -1,24 +1,18 @@
 package com.radiance.mixins.vulkan_render_integration;
 
+import com.radiance.client.RadianceClient;
+import com.radiance.client.RadianceState;
 import com.radiance.client.UnsafeManager;
-import com.radiance.client.cloud.CloudTileManager;
-import com.radiance.client.option.Options;
 import com.radiance.client.pipeline.Pipeline;
 import com.radiance.client.proxy.vulkan.RendererProxy;
 import com.radiance.client.proxy.vulkan.TextureProxy;
-import com.radiance.client.proxy.world.ChunkProxy;
 import java.util.Optional;
-import java.util.function.Consumer;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gl.Framebuffer;
 import net.minecraft.client.gl.GlTimer;
-import net.minecraft.client.gl.ShaderLoader;
 import net.minecraft.client.gl.WindowFramebuffer;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.texture.TextureManager;
 import net.minecraft.client.util.Window;
-import net.minecraft.resource.ReloadableResourceManagerImpl;
-import net.minecraft.resource.ResourceReloader;
 import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -47,20 +41,31 @@ public class MinecraftClientMixins {
     @Redirect(method = "<init>(Lnet/minecraft/client/RunArgs;)V",
         at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/RenderSystem;initRenderer(IZ)V"))
     public void initRenderer(int debugVerbosity, boolean debugSync) {
-        long stackSize = 512 * 1024 * 1024; // 32MB
-        Runnable myRunnable = () -> {
-            RendererProxy.initRenderer(window);
-            Pipeline.collectNativeModules();
+        final long stackSize = 32L * 1024L * 1024L;  // 32MB (original code allocated 512MB by mistake)
+        final Throwable[] failure = new Throwable[1];
+        Runnable r = () -> {
+            try {
+                RendererProxy.initRenderer(window);
+                RadianceClient.LOGGER.info(
+                    "[radiance] RendererProxy.initRenderer returned successfully");
+                RadianceClient.LOGGER.info(
+                    "[radiance] RenderSystem.apiDescription set to '{}'",
+                    com.mojang.blaze3d.systems.RenderSystem.apiDescription);
+                RadianceState.set(RadianceState.State.RENDERER_ACTIVE);
+                RadianceClient.LOGGER.info(
+                    "[radiance] RadianceState transition: BOOT_OK -> RENDERER_ACTIVE");
+                Pipeline.collectNativeModules();
+            } catch (Throwable t) {
+                failure[0] = t;
+                RadianceState.set(RadianceState.State.RENDERER_DISABLED);
+                RadianceClient.LOGGER.error(
+                    "[radiance] RendererProxy.initRenderer threw", t);
+            }
         };
-
-        Thread myThread = new Thread(null, myRunnable, "", stackSize);
-        myThread.start();
-        try {
-            myThread.join();
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-
+        Thread t = new Thread(null, r, "radiance-init", stackSize);
+        t.start();
+        try { t.join(); } catch (InterruptedException e) { throw new RuntimeException(e); }
+        if (failure[0] != null) throw new RuntimeException("Radiance init failed", failure[0]);
         Pipeline.loadPipeline();
         Pipeline.build();
     }
@@ -76,27 +81,6 @@ public class MinecraftClientMixins {
             target = "Lnet/minecraft/client/MinecraftClient;framebuffer:Lnet/minecraft/client/gl/Framebuffer;",
             opcode = org.objectweb.asm.Opcodes.PUTFIELD))
     public void writeNullFramebuffer(MinecraftClient instance, Framebuffer value) {
-    }
-
-    @Redirect(method = "<init>(Lnet/minecraft/client/RunArgs;)V", at = @At(value = "NEW", target = "net/minecraft/client/gl/ShaderLoader"))
-    public ShaderLoader cancelNewShaderLoader(TextureManager textureManager, Consumer<?> onError) {
-        return UnsafeManager.INSTANCE.allocateInstance(ShaderLoader.class);
-    }
-
-    @Redirect(method = "<init>(Lnet/minecraft/client/RunArgs;)V",
-        at = @At(value = "FIELD",
-            target = "Lnet/minecraft/client/MinecraftClient;shaderLoader:Lnet/minecraft/client/gl/ShaderLoader;",
-            opcode = org.objectweb.asm.Opcodes.PUTFIELD))
-    public void writeNullShaderLoader(MinecraftClient instance, ShaderLoader value) {
-    }
-
-    @Redirect(method = "<init>(Lnet/minecraft/client/RunArgs;)V",
-        at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/resource/ReloadableResourceManagerImpl;registerReloader" +
-                "(Lnet/minecraft/resource/ResourceReloader;)V",
-            ordinal = 2))
-    public void cancelShaderLoaderRegister(ReloadableResourceManagerImpl instance,
-        ResourceReloader reloader) {
     }
 
     @Redirect(method = "<init>(Lnet/minecraft/client/RunArgs;)V",
@@ -136,7 +120,7 @@ public class MinecraftClientMixins {
 
     @Redirect(method = "render(Z)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gl/Framebuffer;endWrite()V"))
     public void cancelFramebufferEndWrite(Framebuffer instance, boolean setViewport) {
-        ChunkProxy.waitImportantChunkRebuild();
+        // TODO(deferred): ChunkProxy.waitImportantChunkRebuild() — re-enable when ChunkProxy is ported
         synchronized (TextureProxy.class) {
             RendererProxy.submitCommandAndPresent();
             RendererProxy.acquireContext();
@@ -167,32 +151,24 @@ public class MinecraftClientMixins {
     // endregion
 
     // region <close>
-    @Redirect(method = "close()V", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gl/ShaderLoader;close()V"))
-    public void cancelShaderLoaderClose(ShaderLoader instance) {
-        Options.overwriteConfig();
-    }
-    //endregion
-
-    // region <close>
     @Inject(method = "close()V", at = @At(value = "HEAD"))
     public void closeNativeRenderer(CallbackInfo ci) {
-        CloudTileManager.shutdown();
+        // TODO(deferred): CloudTileManager.shutdown() — re-enable when CloudTileManager is ported
         RendererProxy.close();
     }
     // endregion
 
     // region <disconnect>
-    @Redirect(method = "disconnect(Lnet/minecraft/client/gui/screen/Screen;Z)V",
+    @Redirect(method = "disconnect(Lnet/minecraft/client/gui/screen/Screen;)V",
         at = @At(value = "INVOKE", target = "Lnet/minecraft/client/MinecraftClient;render(Z)V"))
     public void cancelRenderAfterStop(MinecraftClient instance, boolean tick) {
 
     }
 
-    @Inject(method = "disconnect(Lnet/minecraft/client/gui/screen/Screen;Z)V",
+    @Inject(method = "disconnect(Lnet/minecraft/client/gui/screen/Screen;)V",
         at = @At(value = "HEAD"))
-    public void resetBuiltChunkNum(Screen disconnectionScreen, boolean transferring,
-        CallbackInfo ci) {
-        ChunkProxy.builtChunkNum = 0;
+    public void resetBuiltChunkNum(Screen disconnectionScreen, CallbackInfo ci) {
+        // TODO(deferred): ChunkProxy.builtChunkNum = 0 — re-enable when ChunkProxy is ported
     }
     // endregion
 }
