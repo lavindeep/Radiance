@@ -129,8 +129,12 @@ libcore.so
 core.dll
 core.lib
 libnvidia-ngx-dlss*
+libxess*.dll
 include/
 shaders/
+
+# Claude Code local config (per-machine)
+.claude/
 
 # Native binaries (large, platform-specific)
 natives/windows/*.dll

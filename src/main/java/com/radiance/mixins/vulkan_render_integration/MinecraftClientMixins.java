@@ -41,6 +41,11 @@ public class MinecraftClientMixins {
     @Redirect(method = "<init>(Lnet/minecraft/client/RunArgs;)V",
         at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/RenderSystem;initRenderer(IZ)V"))
     public void initRenderer(int debugVerbosity, boolean debugSync) {
+        if (!RadianceState.isRendererPathActive()) {
+            // Radiance disabled earlier in boot (e.g., RENDERER_DISABLED); fall through to vanilla GL initRenderer.
+            com.mojang.blaze3d.systems.RenderSystem.initRenderer(debugVerbosity, debugSync);
+            return;
+        }
         final long stackSize = 32L * 1024L * 1024L;  // 32MB (original code allocated 512MB by mistake)
         final Throwable[] failure = new Throwable[1];
         Runnable r = () -> {
