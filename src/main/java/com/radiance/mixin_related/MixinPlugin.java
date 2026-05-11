@@ -34,7 +34,8 @@ public class MixinPlugin implements IMixinConfigPlugin {
         "com.radiance.mixins.vulkan_render_integration.GlStateManagerMixins",
         "com.radiance.mixins.vulkan_render_integration.RenderLayerMixins",
         "com.radiance.mixins.vulkan_render_integration.ChunkBuilderBuiltChunkMixins",
-        "com.radiance.mixins.vulkan_render_integration.BuiltChunkStorageMixins"
+        "com.radiance.mixins.vulkan_render_integration.BuiltChunkStorageMixins",
+        "com.radiance.mixins.vulkan_render_integration.ClientChunkManagerMixins"
         // WindowMixins + MinecraftClientMixins are ported and guarded but NOT enabled.
         // Promoting them activates the Vulkan boot path (proven working: 3 G6 log lines
         // fire, RendererProxy.initRenderer returns success, RadianceState reaches
