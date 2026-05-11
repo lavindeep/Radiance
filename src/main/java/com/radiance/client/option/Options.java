@@ -819,6 +819,14 @@ public class Options {
             // Migrate config forward after reading.
             optionsVersion = CURRENT_OPTIONS_VERSION;
             overwriteConfig();
+        } catch (UnsatisfiedLinkError e) {
+            // A native option setter isn't exported by core.dll (common on mc/1.20.1 stub).
+            // Java-side fields up to this point are loaded; remaining native pushes are skipped.
+            // MCVR will use its own defaults for unpushed options. Don't disable Radiance.
+            RadianceClient.LOGGER.warn(
+                "[radiance] Options.readOptions: native setter missing ('{}'). "
+                + "Remaining option pushes skipped; MCVR will use defaults.",
+                e.getMessage());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
