@@ -11,11 +11,15 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import net.minecraft.client.render.Camera;
+import net.minecraft.client.render.Frustum;
+import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.chunk.BlockBufferBuilderStorage;
 import net.minecraft.client.render.chunk.ChunkBuilder;
 import net.minecraft.client.render.chunk.ChunkRendererRegion;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
+import org.joml.Matrix4f;
 
 /**
  * ChunkProxy — Radiance's chunk-rebuild / GPU-side chunk lifecycle bridge.
@@ -181,6 +185,37 @@ public class ChunkProxy {
         }
 
         rebuildTasks.clear();
+    }
+
+    /**
+     * Per-layer terrain dispatch shim used by {@code WorldRendererCoreMixins} when
+     * Radiance is active. Currently a no-op pending the Vulkan-side draw path.
+     *
+     * <p>TODO(checkpoint-c-runtime): forward to Vulkan side via native dispatch.
+     * Once {@link #rebuildSingle(ChunkBuilder.BuiltChunk, boolean)} is implemented
+     * and chunks are uploaded to the Vulkan side, this should issue a per-layer
+     * draw via {@code BufferProxy} or a dedicated {@code DrawCommandProxy} method.
+     */
+    @SuppressWarnings("unused")
+    public static void dispatchLayer(RenderLayer layer,
+        MatrixStack matrices,
+        double cameraX,
+        double cameraY,
+        double cameraZ,
+        Matrix4f projection) {
+        // No-op for Checkpoint C structural scope.
+    }
+
+    /**
+     * Frustum-update shim used by {@code WorldRendererCoreMixins} when Radiance
+     * is active. Currently a no-op pending the Vulkan-side culling integration.
+     *
+     * <p>TODO(checkpoint-c-runtime): push frustum state into the Vulkan side so
+     * the C++ chunk-culling layer can use it for visibility tests.
+     */
+    @SuppressWarnings("unused")
+    public static void updateFrustum(Camera camera, Frustum frustum) {
+        // No-op for Checkpoint C structural scope.
     }
 
     @SuppressWarnings("unused")

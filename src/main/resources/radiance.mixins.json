@@ -68,7 +68,8 @@
     "vulkan_render_integration.ScreenMixins",
     "vulkan_render_integration.ScreenshotRecorderMixins",
     "vulkan_render_integration.TextureUtilMixins",
-    "vulkan_render_integration.WindowMixins"
+    "vulkan_render_integration.WindowMixins",
+    "vulkan_render_integration.WorldRendererCoreMixins"
   ],
   "injectors": {
     "defaultRequire": 1
