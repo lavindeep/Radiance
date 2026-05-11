@@ -1,38 +1,35 @@
-# Done May 5th 2026 10:09 AM EST
-
 # Handoff — Where this is and what's next
 
-This document is the **single entry point** for continuing the Radiance 1.20.1 backport on a new machine (especially Windows, where the next checkpoint physically lives). It is committed to the repo so `git clone` is the only setup step needed.
+This document is the **single entry point** for continuing the Radiance 1.20.1 backport on a new machine. It is committed to the repo so `git clone` is the only setup step needed.
 
-## Current state (2026-05-11, end of Checkpoint 0c+A)
+## Current state (2026-05-11, end of Checkpoint B partial)
 
-**Checkpoint 0c+A SHIPPED. PRD G1+G3-recovery CLEARED.** The alpha-0 boot path works end-to-end on Windows.
+**Checkpoint B PARTIAL. PRD G6 PARTIAL.** The Vulkan boot path is proven working at runtime — `RendererProxy.initRenderer` returns success, `RadianceState` reaches `RENDERER_ACTIVE`, all 3 FR-10 log lines fire — but `Pipeline.buildNative` throws an uncaught C++ exception in `core.dll` immediately after, crashing the JVM. Branch ships with the boot mixins ported but NOT enabled in `MixinPlugin.ENABLED_MIXINS` so day-to-day `runClient` runs cleanly at alpha-0-equivalent behavior. Promote when MCVR `pipeline.cpp` is fixed.
 
-- **Branch:** `checkpoint/0c-a` cut from `eecebfe` on the Windows box. Three commits on top:
-  - `d556769` feat(alpha-0): bump Fabric Loader to 0.16.10; pre-load libxess.dll before core.dll
-  - `d983842` docs: BUILD-WINDOWS.md — actual Windows build workflow used to clear G1+G3-recovery
-  - (this commit) docs(W15): mark G1+G3-recovery cleared in PLAN.md; refresh HANDOFF.md current-state
-- **MCVR side:** `mc/1.20.1` branch on the Windows MCVR clone, three commits on top of upstream `9905c81`:
-  - `c2f9327` feat(handshake): RendererProxy.handshake/validateAbi for mcVersion 12001 (Radiance PRD §4.3.1)
-  - `bee0add` build(mc/1.20.1): exclude deferred-class .cpp files from build
-  - `ef54555` fix(mc/1.20.1): include <cstddef> for size_t; exclude ShaderProxy.cpp
-- **Gate evidence:** `runClient` log captured `RendererProxy.handshake(12001, javaOrdinals.length=130) returned 0`. `System.load` for `libxess.dll` then `core.dll` both succeeded. No `RENDERER_DISABLED` / `INIT_FAILED` / `UnsatisfiedLinkError` in the log post-boot. Main menu rendered, clean Stopping! on close.
-- **`BUILD-WINDOWS.md` committed** at repo root with the real toolchain versions, paths, and a Known Issues section documenting plan deviations.
-- **Test suite:** 21 tests still passing (regression baseline unchanged; no Java test changes in this checkpoint).
-- **Neither branch pushed to remote yet** — both `checkpoint/0c-a` (Radiance) and `mc/1.20.1` (MCVR clone) are local-only. Push decision is the user's; see "Next steps" below.
+- **Branch:** `checkpoint/checkpoint-b` cut from `bb7aea1` (alpha-0 tip). 11 commits on top — see `git log --oneline checkpoint/0c-a..checkpoint/checkpoint-b`.
+- **Mixins promoted to `ENABLED_MIXINS`** (active): the four alpha-0 resource trackers + `GLXMixins` + `GlStateManagerMixins`. Total: 6.
+- **Mixins ported + guarded but NOT enabled** (commented out in `ENABLED_MIXINS` with explanation): `WindowMixins`, `MinecraftClientMixins`, `RenderSystemMixins`.
+- **Mixins deferred to Checkpoint C** (still in `src/deferred/java/`): `GameRendererMixins`, `BufferRendererMixins`. See `KNOWN-ISSUES.md` for rationale.
+- **Gate evidence (G6 log criteria — verified working):** in a test run with `Window`/`MinecraftClient` mixins added to `ENABLED_MIXINS`, `mc-test/instance/logs/latest.log` captured:
+  - `[radiance] RendererProxy.initRenderer returned successfully`
+  - `[radiance] RenderSystem.apiDescription set to 'Vulkan 1.4'`
+  - `[radiance] RadianceState transition: BOOT_OK -> RENDERER_ACTIVE`
+- **G6 blocker:** `Pipeline.buildNative(long)` → MCVR `Renderer::framework()->pipeline()->buildWorldPipelineBlueprint()` throws an uncaught C++ exception in `core.dll+0x141e4c`. Likely from a `setOrCreateInputImages`/`setOrCreateOutputImages` cascade after DLSS module is skipped (NGX init failure on the test hardware — RTX 5070 Ti). See `KNOWN-ISSUES.md` for full details + triage approach.
+- **Test suite:** 23 tests passing (21 alpha-0 + 2 new for `isRendererPathActive`).
+- **Branch backup:** push to `origin/checkpoint/checkpoint-b` when ready (no PR per user — branch stays on personal fork until MCVR maintainers see a viable product).
 
 ## What's done
 
-- **Checkpoint 0b** (Java foundation, 1.20.1 yarn migration, compile-quarantine of 66 deferred files, JUnit 5, `RadianceState`, `RadianceBufferHandle`, JNI `handshake`/`validateAbi` declarations) — SHIPPED in merge `a456701`. See `docs/PLAN.md` Part 3.
-- **Alpha-0 Java wiring** (handshake call site in `RadianceClient.performHandshake()`, structured `Constants.dumpOrdinals()` per PRD §4.3.1, `core.lib` + Streamline DLLs marked optional via `copyOptionalFileFromResource`, resource-tracker mixins guarded by `RadianceState.isResourceTrackingEnabled()`, `ModuleEntry` disk-precedence refactor) — SHIPPED in commits `91a7b37`/`ffe8215`/`095273e`.
-- **Checkpoint 0c+A** — MCVR `mc/1.20.1` branch built; §4.3.1 handshake decoder implemented and verified; `core.dll` produced; Radiance Java wired to pre-load libxess.dll; Fabric Loader bumped; `runClient` reaches `BOOT_OK` and main menu via vanilla GL. See `BUILD-WINDOWS.md` and `docs/PLAN.md` Part 4 status note.
+- **Checkpoint 0b** — Java foundation, 1.20.1 yarn migration, compile-quarantine of 66 deferred files, JUnit 5, `RadianceState`, `RadianceBufferHandle`, JNI `handshake`/`validateAbi`. SHIPPED in merge `a456701`. See `docs/PLAN.md` Part 3.
+- **Checkpoint 0c+A** — MCVR `mc/1.20.1` branch built with §4.3.1 handshake decoder; `core.dll` produced; alpha-0 gate G1+G3-recovery CLEARED. SHIPPED on `checkpoint/0c-a` head `bb7aea1`. See `docs/PLAN.md` Part 4 status note and `BUILD-WINDOWS.md`.
+- **Checkpoint B (PARTIAL)** — 7 boot-path mixins ported to 1.20.1 + guarded per PRD §4.7; `RadianceState.isRendererPathActive()` added; `Options.readOptions` made tolerant of missing native setters. Vulkan boot path verified working at runtime (G6 log criteria met). `Window`/`MinecraftClient` allowlist promotion staged but reverted because Pipeline.buildNative crashes. SHIPPED on `checkpoint/checkpoint-b` head `<TBD this commit>`.
 
 ## Next steps
 
-- **Push the branches** if you want them backed up off the Windows box. `checkpoint/0c-a` (Radiance) and `mc/1.20.1` (MCVR clone). If you fork MCVR on GitHub first, you can push there; otherwise just push Radiance to `origin/main` once you've reviewed the diff.
-- **DLSS DLLs (optional):** for ray reconstruction support, download `nvngx_dlss.dll` + `nvngx_dlssd.dll` from https://github.com/NVIDIA/DLSS/tree/main/lib/Windows_x86_64/rel into `mc-test/instance/radiance/`. NVIDIA license forbids redistribution so this is a manual step on every machine (same workflow whether the mod is shipped via GitHub Releases or CurseForge).
-- **Tech debt:** 125 MB of `libxess*.dll` is bloating the jar. Fix at MCVR install rule OR `processResources` filter. See `BUILD-WINDOWS.md` Known Issues section.
-- **Next planning target: Checkpoint B** (alpha-1 boot-path mixins). Per `docs/PLAN.md` Part 2 §B.
+- **Push the branch** — `git push -u origin checkpoint/checkpoint-b` to back up off the Windows machine. No PR yet.
+- **Fix Pipeline.buildNative C++ crash** — this is the work to actually clear G6 fully. Approach: enable Vulkan validation layers (`VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation`) on next `runClient` to capture VUIDs; add `std::cerr` lines at each `throw` site in `MCVR/src/core/render/pipeline.cpp` (4 sites) to bisect which module-wiring step fails. Most likely culprit: `setOrCreateInputImages` returning false on a downstream module after DLSS is skipped (DLSS unavailable → NGX init fail → consumers can't read DLSS output → throw `"Input image not set properly"`). Either harden `Pipeline.assembleDefault` (Java) to omit downstream-dependents when DLSS skips, or make MCVR `buildWorldPipelineBlueprint` fail-open per module.
+- **Add stubs for missing Options JNI setters in MCVR** — ~44 stub `JNIEXPORT void` functions in `MCVR/src/core/middleware/com_radiance_client_option_Options.cpp` so Java-side option pushes have JNI targets (no-op until wired through Vulkan).
+- **Checkpoint C** target: world/chunk/buffer bridge for alpha-2 / G4+G7. Includes `BufferRendererMixins` port, `GameRendererMixins` rewrite, and the Pipeline crash fix above as a prerequisite.
 
 ## What was queued (historical — preserved for reference)
 
