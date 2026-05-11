@@ -34,6 +34,11 @@ public final class RadianceState {
         return current == State.RENDERER_ACTIVE;
     }
 
+    public static boolean isRendererPathActive() {
+        State c = current;
+        return c == State.BOOT_OK || c == State.RENDERER_ACTIVE;
+    }
+
     public static void runIfActive(Runnable r) {
         if (isRendererActive()) {
             r.run();

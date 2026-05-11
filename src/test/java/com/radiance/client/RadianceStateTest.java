@@ -68,4 +68,22 @@ class RadianceStateTest {
         RadianceState.runIfActive(() -> ran[0] = true);
         assertTrue(ran[0]);
     }
+
+    @Test
+    void isRendererPathActive_trueForBootOkAndRendererActive() {
+        RadianceState.set(RadianceState.BOOT_OK);
+        assertTrue(RadianceState.isRendererPathActive());
+        RadianceState.set(RadianceState.RENDERER_ACTIVE);
+        assertTrue(RadianceState.isRendererPathActive());
+    }
+
+    @Test
+    void isRendererPathActive_falseForOtherStates() {
+        RadianceState.set(RadianceState.UNINITIALIZED);
+        assertFalse(RadianceState.isRendererPathActive());
+        RadianceState.set(RadianceState.INIT_FAILED);
+        assertFalse(RadianceState.isRendererPathActive());
+        RadianceState.set(RadianceState.RENDERER_DISABLED);
+        assertFalse(RadianceState.isRendererPathActive());
+    }
 }
