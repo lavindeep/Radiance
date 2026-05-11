@@ -35,13 +35,12 @@ public class MixinPlugin implements IMixinConfigPlugin {
         "com.radiance.mixins.vulkan_render_integration.RenderLayerMixins",
         "com.radiance.mixins.vulkan_render_integration.ChunkBuilderBuiltChunkMixins",
         "com.radiance.mixins.vulkan_render_integration.BuiltChunkStorageMixins",
-        "com.radiance.mixins.vulkan_render_integration.ClientChunkManagerMixins"
-        // WindowMixins + MinecraftClientMixins are ported and guarded but NOT enabled.
-        // Promoting them activates the Vulkan boot path (proven working: 3 G6 log lines
-        // fire, RendererProxy.initRenderer returns success, RadianceState reaches
-        // RENDERER_ACTIVE). However Pipeline.buildNative throws an uncaught C++
-        // exception (MCVR-side) immediately after, crashing the JVM. Re-enable once
-        // Pipeline.buildWorldPipelineBlueprint is fixed in Checkpoint C.
+        "com.radiance.mixins.vulkan_render_integration.ClientChunkManagerMixins",
+        // Phase 0 temp-enable: re-instated for Pipeline.buildNative crash capture.
+        // Once the C++ crash is fixed these stay permanent (Step 4 promotion).
+        "com.radiance.mixins.vulkan_render_integration.WindowMixins",
+        "com.radiance.mixins.vulkan_render_integration.MinecraftClientMixins",
+        "com.radiance.mixins.vulkan_render_integration.RenderSystemMixins"
     );
 
     @Override

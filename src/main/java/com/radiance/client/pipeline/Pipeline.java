@@ -424,8 +424,10 @@ public class Pipeline {
             connect(rayTracingModule.getOutputImageConfig("diffuse_ray_dir_hit_dist"),
                 dlssModule.getInputImageConfig("diffuse_ray_dir_hit_dist"));
 
-            connect(rayTracingModule.getOutputImageConfig("specular_ray_dir_hit_dist"),
-                dlssModule.getInputImageConfig("specular_ray_dir_hit_dist"));
+            // Note: specular_ray_dir_hit_dist removed from ray_tracing.yaml — MCVR's
+            // RayTracingModule::outputImageNum=15 does not include it, and emitting it
+            // creates a gap in the C++ contiguous-index check (Pipeline.buildNative crash).
+            // When DLSS path is re-enabled later, replumb against MCVR's actual outputs.
 
             connect(dlssModule.getOutputImageConfig("processed"),
                 toneMappingModule.getInputImageConfig("denoised_radiance"));
