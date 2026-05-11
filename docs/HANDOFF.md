@@ -22,7 +22,7 @@ This document is the **single entry point** for continuing the Radiance 1.20.1 b
 
 - **Checkpoint 0b** — Java foundation, 1.20.1 yarn migration, compile-quarantine of 66 deferred files, JUnit 5, `RadianceState`, `RadianceBufferHandle`, JNI `handshake`/`validateAbi`. SHIPPED in merge `a456701`. See `docs/PLAN.md` Part 3.
 - **Checkpoint 0c+A** — MCVR `mc/1.20.1` branch built with §4.3.1 handshake decoder; `core.dll` produced; alpha-0 gate G1+G3-recovery CLEARED. SHIPPED on `checkpoint/0c-a` head `bb7aea1`. See `docs/PLAN.md` Part 4 status note and `BUILD-WINDOWS.md`.
-- **Checkpoint B (PARTIAL)** — 7 boot-path mixins ported to 1.20.1 + guarded per PRD §4.7; `RadianceState.isRendererPathActive()` added; `Options.readOptions` made tolerant of missing native setters. Vulkan boot path verified working at runtime (G6 log criteria met). `Window`/`MinecraftClient` allowlist promotion staged but reverted because Pipeline.buildNative crashes. SHIPPED on `checkpoint/checkpoint-b` head `<TBD this commit>`.
+- **Checkpoint B (PARTIAL)** — 7 boot-path mixins ported to 1.20.1 + guarded per PRD §4.7; `RadianceState.isRendererPathActive()` added; `Options.readOptions` made tolerant of missing native setters. Vulkan boot path verified working at runtime (G6 log criteria met). `Window`/`MinecraftClient` allowlist promotion staged but reverted because Pipeline.buildNative crashes. SHIPPED on `checkpoint/checkpoint-b` head `91731a7` (docs commit at end of session).
 
 ## Next steps
 
