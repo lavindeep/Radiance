@@ -1,54 +1,71 @@
 # Known Issues
 
-## Checkpoint B — alpha-1 partial
+## Checkpoint C — alpha-2 partial (Java structure landed; runtime verification deferred)
 
-### Vulkan boot path is wired but blocked on Pipeline.buildNative C++ crash
+### Pipeline.buildNative C++ crash (unresolved — Phase 0 runtime work)
 
-`WindowMixins` and `MinecraftClientMixins` are ported to 1.20.1 shapes, guarded per PRD §4.7, and ready to enable. The Vulkan boot path itself is proven working when both are added to `MixinPlugin.ENABLED_MIXINS`:
+`WindowMixins`, `MinecraftClientMixins`, `RenderSystemMixins` are ported, guarded per PRD §4.7, and ready to enable. The Vulkan boot path itself was proven working in Checkpoint B testing (`RendererProxy.initRenderer` returns success, `RenderSystem.apiDescription` = "Vulkan 1.4", `RadianceState` reaches `RENDERER_ACTIVE`, all three G6 log lines fire).
 
-- `RendererProxy.initRenderer` returns success (Vulkan instance/device/swapchain come up).
-- `RenderSystem.apiDescription` is set to `Vulkan 1.4`.
-- `RadianceState` transitions `BOOT_OK → RENDERER_ACTIVE`.
-- All three G6 log lines fire as specified in PRD §6.
+`Pipeline.buildNative(long)` then throws an uncaught C++ exception in `core.dll+0x141e4c`, crashing the JVM via `EXCEPTION_UNCAUGHT_CXX_EXCEPTION`. The C++ entry point is `Java_com_radiance_client_pipeline_Pipeline_buildNative` → `Renderer::framework()->pipeline()->buildWorldPipelineBlueprint(params)` at `MCVR/src/core/render/pipeline.cpp`. The four throw sites are lines 53, 104, 135, and 150. The likely culprit is the DLSS-skip cascade — `[Pipeline] dlss module skipped: NGX initialization/query failed.` precedes the crash on the test hardware (RTX 5070 Ti, driver 596.21).
 
-However, the very next call — `Pipeline.buildNative(long)` invoked from `Pipeline.build()` — throws an uncaught C++ exception in `core.dll+0x141e4c`, crashing the JVM via `EXCEPTION_UNCAUGHT_CXX_EXCEPTION`. The C++ entry point is `Java_com_radiance_client_pipeline_Pipeline_buildNative` → `Renderer::framework()->pipeline()->buildWorldPipelineBlueprint(params)` at `src/core/render/pipeline.cpp`.
+Java-side `Pipeline.assembleDefault()` already routes around DLSS when `Options.dlssDEnabled && isNativeModuleAvailable("...dlss...")` is false. The crash therefore comes from MCVR's C++ pipeline builder either ignoring the Java-side wiring or unconditionally requesting DLSS images.
 
-Plausible causes (not yet bisected):
-- DLSS module's `[Pipeline] dlss module skipped: NGX initialization/query failed.` log line appears before the crash. Subsequent modules in the default RT → tone-mapping → post graph may depend on DLSS's output images; their `setOrCreateInputImages` returns `false` and `pipeline.cpp` throws `"Input image not set properly"` (line 150).
-- Alternative: ray-tracing module's `setOrCreateOutputImages` could be failing on this hardware (RTX 5070 Ti, driver 596.21).
-
-Triage approach:
-1. Enable Vulkan validation layers (`VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation`) for the next `runClient` to see if VUID errors precede the throw.
-2. Add a `std::cerr` line at each throw site in MCVR's `pipeline.cpp` to identify which exact module-wiring step fails.
-3. Either harden the default-pipeline assembler in `Pipeline.assembleDefault()` (Java side) to omit modules whose dependents fail, or fix MCVR's `buildWorldPipelineBlueprint` to fail-open per module.
-
-To reproduce the crash (or test fixes), add to `MixinPlugin.ENABLED_MIXINS`:
-
+To re-enable the boot mixins, add to `MixinPlugin.ENABLED_MIXINS`:
 ```java
 "com.radiance.mixins.vulkan_render_integration.WindowMixins",
-"com.radiance.mixins.vulkan_render_integration.MinecraftClientMixins"
+"com.radiance.mixins.vulkan_render_integration.MinecraftClientMixins",
+"com.radiance.mixins.vulkan_render_integration.RenderSystemMixins"
 ```
 
-Otherwise the branch runs as alpha-0-equivalent (vanilla GL rendering, all Phase A guards in place).
+Triage path (from `docs/superpowers/plans/2026-05-11-checkpoint-c.md` Phase 0):
+1. Instrument MCVR `pipeline.cpp` at each throw site with `std::cerr` traces identifying the failing module/image.
+2. Run with `VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation` to surface VUIDs.
+3. Either harden `Pipeline.assembleDefault` (Java) to drop downstream-of-DLSS modules, OR fix MCVR `buildWorldPipelineBlueprint` to fail-open per module.
 
-### GameRendererMixins deferred to Checkpoint C
+Otherwise the branch runs at Checkpoint-B-equivalent behavior at runtime (vanilla GL rendering, 10 active mixins for resource tracking + minor render integration).
 
-1.20.1's `GameRenderer.renderWorld(float, long, MatrixStack)`, `renderHand(MatrixStack, Camera, float)`, and `render(float, long, boolean)` have different signatures than the 1.21+ shapes the deferred mixin targets. Most methods would need to be rewritten against 1.20.1's API. The only piece that survives strip-down is `IGameRendererExt.neoVoxelRT$getRotationMatrix()`, which isn't worth a standalone mixin. Will be addressed in Checkpoint C alongside `WorldRendererCoreMixins`.
+### ChunkProxy.rebuildSingle is stubbed
 
-### BufferRendererMixins deferred to Checkpoint C
+Both `rebuildSingle(BuiltChunk, boolean)` and `rebuildSingle(ChunkRendererRegion, ChunkBuilder, IChunkBuilderExt, BuiltChunk, BlockBufferBuilderStorage, boolean)` throw `UnsupportedOperationException` with `TODO(checkpoint-c-runtime)`. The 1.21+ source used `SectionBuilder.RenderData` (a record with buffers/blockEntities/chunkOcclusionData fields) which doesn't exist in 1.20.1 — those fields are produced inline by `ChunkBuilder.BuiltChunk.RebuildTask.render(...)` which returns a private `RebuildTask` result type.
 
-1.20.1's `BufferRenderer.drawWithGlobalProgram` takes `BufferBuilder$BuiltBuffer` (inner class). The deferred mixin uses standalone `BuiltBuffer` (1.21+). Plus `BufferProxy` is in MCVR's deferred-class CMake exclusion list — the JNI target for the redirect body doesn't exist yet. G6 doesn't require it; main-menu primitives flow through `DrawContext`.
+The 1.20.1 equivalent has to either (a) mixin into `RebuildTask.render` to intercept its result, or (b) re-implement section building from scratch. Touching this also revisits `IChunkBuilderExt`'s missing `neoVoxelRT$getSectionBuilder()` accessor.
 
-### Options.nativeSetTonemappingMode and many other native setters not exported by MCVR
+This is the gating work for G7 (terrain renders through Vulkan in superflat creative). `WorldRendererCoreMixins` is written and registered in `radiance.mixins.json` but NOT in `MixinPlugin.ENABLED_MIXINS` to avoid runtime regression (enabling it without `rebuildSingle` would cancel vanilla terrain rendering and immediately throw on first chunk).
 
-`Options.java` declares ~50 `nativeSetX(...)` methods. MCVR's `mc/1.20.1` branch only implements 6 of them. The first call to an unimplemented native (`nativeSetTonemappingMode`) inside `Options.readOptions` used to throw `UnsatisfiedLinkError`, which `initializeNativeBackedServices` caught and converted to `RENDERER_DISABLED`, blocking Vulkan boot.
+### PBR vertex pipeline deferred to Checkpoint D
 
-Worked around in commit `07aa44f` by catching `UnsatisfiedLinkError` inside `Options.readOptions` itself — first missing setter aborts the rest of the option pushes but state stays `BOOT_OK`. MCVR uses its own defaults for unpushed options.
+`PBRVertexConsumer.java` and 4 sibling files (`PBRVertexFormatElements`, `PBRVertexFormats`, `StorageVertexConsumerProvider`, `StorageOutlineVertexConsumerProvider`) remain in `src/deferred/java/`. The 1.21+ `BufferAllocator` type they depend on does not exist in 1.20.1 — the API was reshaped in 1.21. A faithful port requires:
+- Replacing `BufferAllocator` with a self-managed `MemoryUtil.nmemAlloc` byte region + growth logic.
+- Rebuilding the global VertexFormatElement registry (`PBR_X.id()` / `.getBit()`) since 1.20.1's `VertexFormatElement` lacks the registry API.
+- Resolving `BufferBuilder.BuiltBuffer`'s package-private constructor — PBR currently cannot return a vanilla `BuiltBuffer`, so an alternate `PBRBuiltBuffer` shape needs to be designed.
 
-Long-term fix: add stub JNI exports for the remaining ~44 option setters in MCVR's `src/core/middleware/com_radiance_client_option_Options.cpp` so all Java-side option pushes have a JNI target (no-op is fine until the corresponding option is actually wired through Vulkan).
+Total churn estimated ~300 LOC across the 5 files plus a design decision on the new return type. This belongs in Checkpoint D alongside the PBR-shading pipeline.
+
+Transitive deferrals:
+- `BuiltBufferMixins.java` — uses `PBR_POS` element fallback. Without PBR formats, the mixin is redundant.
+- `BlockModelRendererMixins.java` — uses `PBRVertexConsumer`.
+- `FluidRendererMixins.java` — uses `PBRVertexConsumer`.
+
+### ChunkBuilderMixins + SectionBuilderMixins deferred to Checkpoint D
+
+1.21 introduced a separate `SectionBuilder` class (chunk-section build pipeline) and `BlockBufferAllocatorStorage` (per-thread allocator pool). Neither exists in 1.20.1 — section building happens inline in `ChunkBuilder.BuiltChunk.RebuildTask.render`. The `ChunkBuilderMixins` @Shadow fields target nonexistent symbols; `SectionBuilderMixins` targets the nonexistent class. Both stay in `src/deferred/java/`.
+
+Re-enabling them requires either:
+- Retargeting at `ChunkBuilder.BuiltChunk.RebuildTask` and rewriting the inject bodies against 1.20.1's RebuildTask shape, OR
+- A combined section-build mixin that bypasses vanilla's section-rebuild flow entirely.
+
+### RenderLayerMixins guard timing
+
+`RenderLayerMixins.replaceLightning` injects at TAIL of `RenderLayer.<clinit>`. The PRD §4.7 guard (`isRendererActive()`) was applied mechanically, but `RenderLayer.<clinit>` runs very early in MC boot — long before `RadianceState` reaches `RENDERER_ACTIVE`. Net effect under current init order: the LIGHTNING render layer replacement never fires.
+
+If the design intent is "replace LIGHTNING whenever Radiance is installed", the right answer is either (a) unconditional replacement (remove the guard), or (b) lazy replacement triggered from `RadianceClient` post-handshake via reflection or a dedicated init hook. Resolve in Checkpoint D or E when the actual lightning RT path is wired.
 
 ### libxess*.dll (~125 MB) tech debt
 
-MCVR's CMake `install(FILES ${XESS_RUNTIME_DLLS} DESTINATION ${MCVR_INSTALL_LIB_DIR})` drops three libxess DLLs (~125 MB combined) into `src/main/resources/`, where Gradle's `processResources` then bundles them into the mod jar. Inflates the jar from ~30 MB to ~110 MB. Now ignored in `.gitignore` so they aren't committed, but still bundled at build time. Fix either by:
+MCVR's CMake `install(FILES ${XESS_RUNTIME_DLLS} DESTINATION ${MCVR_INSTALL_LIB_DIR})` drops three libxess DLLs (~125 MB combined) into `src/main/resources/`. Gradle's `processResources` bundles them into the mod jar, inflating from ~30 MB to ~110 MB. Ignored in `.gitignore` so they aren't committed, but still bundled at build time. Fix either by:
 1. Filtering libxess in Gradle `processResources`.
-2. Fixing MCVR's `install` rule to drop XeSS DLLs into `natives/windows/` directly.
+2. Fixing MCVR's `install` rule to drop XeSS DLLs into `natives/windows/` directly (gitignored, but not double-bundled).
+
+### Options stubs landed; full wiring is per-option Checkpoint scope
+
+MCVR commit `2e88626` adds 64 stub JNI exports for the missing `nativeSet*` methods declared in `Options.java`. `Options.readOptions` no longer trips `UnsatisfiedLinkError` — the Checkpoint B workaround swallow remains as defense-in-depth, but is effectively unreachable now. Per-option wiring (translating each Java-side push into a Vulkan/MCVR side state change) is per-option Checkpoint scope (e.g., DLSS quality wires in Checkpoint E, tone mapping in C/D).
