@@ -6,19 +6,11 @@ import static org.lwjgl.system.MemoryStack.stackPush;
 import static org.lwjgl.system.MemoryUtil.memAddress;
 import static org.lwjgl.system.MemoryUtil.memSet;
 
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.radiance.client.constant.Constants;
+import com.radiance.client.proxy.buffer.RadianceBufferHandle;
 import com.radiance.client.texture.TextureTracker;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.Map;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.BuiltBuffer;
-import net.minecraft.client.render.Camera;
-import net.minecraft.client.render.Fog;
-import net.minecraft.client.render.RenderPhase;
-import net.minecraft.client.render.VertexFormat;
-import net.minecraft.client.world.ClientWorld;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.lwjgl.system.MemoryStack;
@@ -53,32 +45,38 @@ public class BufferProxy {
     public static native void performQueuedUpload();
 
     public static VertexIndexBufferHandle createAndUploadVertexIndexBuffer(
-        BuiltBuffer builtBuffer) {
-        BuiltBuffer.DrawParameters drawParameters = builtBuffer.getDrawParameters();
-        assert builtBuffer.getDrawParameters().mode() == VertexFormat.DrawMode.QUADS;
-
-        int vertexSize = drawParameters.vertexCount() * drawParameters.format().getVertexSizeByte();
+            RadianceBufferHandle handle, ByteBuffer vertexData,
+            ByteBuffer sortedIndexData) {
+        int vertexSize = vertexData.remaining();
         int vertexId = allocateBuffer();
         initializeBuffer(vertexId, vertexSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT.getValue());
-        queueUpload(builtBuffer.getBuffer(), vertexSize, vertexId);
+        queueUpload(vertexData, vertexSize, vertexId);
 
-        int indexSize = drawParameters.indexCount() * drawParameters.indexType().size;
         int indexId = allocateBuffer();
-        initializeBuffer(indexId, indexSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT.getValue());
-        if (builtBuffer.getSortedBuffer() != null) {
-            queueUpload(builtBuffer.getSortedBuffer(), indexSize, indexId);
+        if (sortedIndexData != null) {
+            int indexSize = sortedIndexData.remaining();
+            initializeBuffer(indexId, indexSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT.getValue());
+            queueUpload(sortedIndexData, indexSize, indexId);
         } else {
-            int type = Constants.IndexTypes.getValue(drawParameters.indexType());
-            int drawMode = Constants.DrawModes.getValue(drawParameters.mode());
-            buildIndexBuffer(indexId, type, drawMode, drawParameters.vertexCount(),
-                drawParameters.indexCount());
+            int indexSize = handle.indexCount * indexTypeSizeBytes(handle.indexTypeOrdinal);
+            initializeBuffer(indexId, indexSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT.getValue());
+            buildIndexBuffer(indexId, handle.indexTypeOrdinal, handle.drawModeOrdinal,
+                handle.vertexCount, handle.indexCount);
         }
-
         return new VertexIndexBufferHandle(vertexId, indexId);
+    }
+
+    private static int indexTypeSizeBytes(int indexTypeOrdinal) {
+        // Constants.IndexTypes: SHORT=0 (2 bytes), INT=1 (4 bytes)
+        return indexTypeOrdinal == 0 ? Short.BYTES : Integer.BYTES;
     }
 
     public static native void updateOverlayDrawUniform(long ptr);
 
+    // TODO(checkpoint-d): rewrite for 1.20.1 yarn (was using net.minecraft.client.render.Fog,
+    // which doesn't exist in 1.20.1 — fog is exposed as discrete RenderSystem.getShaderFogStart/
+    // getShaderFogEnd/getShaderFogColor/getShaderFogShape). Re-enable when GuiRender mixins land.
+    /*
     public static void updateOverlayDrawUniform() {
         try (MemoryStack stack = stackPush()) {
             int size = 336;
@@ -161,6 +159,7 @@ public class BufferProxy {
             updateOverlayDrawUniform(addr);
         }
     }
+    */
 
     public static native void updateOverlayPostUniform(long ptr);
 
@@ -201,6 +200,11 @@ public class BufferProxy {
 
     public static native void updateWorldUniform(long ptr);
 
+    // TODO(checkpoint-d): rewrite for 1.20.1 yarn (was using net.minecraft.client.render.Fog +
+    // net.minecraft.client.render.Camera + net.minecraft.client.world.ClientWorld parameters).
+    // 1.20.1 has no Fog type — translate the fog argument to discrete fields, and reintroduce
+    // Camera/ClientWorld imports when the WorldRenderer mixins for 1.20.1 are written.
+    /*
     public static void updateWorldUniform(Camera camera, Matrix4f viewMatrix,
         Matrix4f effectedViewMatrix, Matrix4f projectionMatrix, int overlayTextureID, Fog fog,
         ClientWorld world, int endSkyTextureID, int endPortalTextureID) {
@@ -275,6 +279,7 @@ public class BufferProxy {
             updateWorldUniform(addr);
         }
     }
+    */
 
     public static native void updateSkyUniform(long ptr);
 
