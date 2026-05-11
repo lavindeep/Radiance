@@ -40,8 +40,14 @@ public class MixinPlugin implements IMixinConfigPlugin {
         // Once the C++ crash is fixed these stay permanent (Step 4 promotion).
         "com.radiance.mixins.vulkan_render_integration.WindowMixins",
         "com.radiance.mixins.vulkan_render_integration.MinecraftClientMixins",
-        "com.radiance.mixins.vulkan_render_integration.RenderSystemMixins",
-        "com.radiance.mixins.vulkan_render_integration.BufferRendererMixins"
+        "com.radiance.mixins.vulkan_render_integration.RenderSystemMixins"
+        // BufferRendererMixins is ported and ready, but NOT enabled: MCVR's mc/1.20.1
+        // branch does not export Java_com_radiance_client_proxy_vulkan_RendererProxy_drawOverlay
+        // at all (the original 1.21+ design routed overlay drawing through ShaderProxy.cpp,
+        // which is excluded from build because the Java ShaderProxy class was removed).
+        // Promoting BufferRendererMixins without that JNI symbol crashes immediately on
+        // SplashOverlay rendering. Re-enable in Checkpoint D once MCVR provides a
+        // drawOverlay JNI export (or once ShaderProxy is resurrected on the Java side).
     );
 
     @Override
