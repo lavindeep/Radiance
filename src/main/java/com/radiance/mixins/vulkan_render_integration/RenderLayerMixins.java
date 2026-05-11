@@ -1,11 +1,11 @@
 package com.radiance.mixins.vulkan_render_integration;
 
+import com.radiance.client.RadianceState;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.RenderPhase;
 import net.minecraft.client.render.VertexFormat;
 import net.minecraft.client.render.VertexFormats;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.TriState;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Mutable;
@@ -24,6 +24,12 @@ public class RenderLayerMixins {
 
     @Inject(method = "<clinit>", at = @At("TAIL"))
     private static void replaceLightning(CallbackInfo ci) {
+        // PRD §4.7 guard: bail out cleanly when Radiance is not active. <clinit> for
+        // RenderLayer typically fires very early in MC boot (likely before
+        // RENDERER_ACTIVE is reached), so in practice this body will rarely execute —
+        // but the guard is correct per the §4.7 mechanical rule for @Inject mixins.
+        if (!RadianceState.isRendererActive()) return;
+
         LIGHTNING =
             RenderLayer.of("lightning",
                 VertexFormats.POSITION_TEXTURE_COLOR,
@@ -37,8 +43,8 @@ public class RenderLayerMixins {
                     .transparency(RenderLayer.LIGHTNING_TRANSPARENCY)
                     .target(RenderLayer.WEATHER_TARGET)
                     .texture(new RenderPhase.Texture(
-                        Identifier.ofVanilla("textures/block/lightning.png"),
-                        TriState.FALSE,
+                        new Identifier("textures/block/lightning.png"),
+                        false,
                         false))
                     .build(false));
     }
