@@ -10,6 +10,10 @@ public class GLXMixins {
 
     @Redirect(method = "_init(IZ)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gl/GlDebug;enableDebug(IZ)V"))
     private static void cancelOpenGLDebug(int verbosity, boolean sync) {
-
+        if (!com.radiance.client.RadianceState.isRendererPathActive()) {
+            net.minecraft.client.gl.GlDebug.enableDebug(verbosity, sync);
+            return;
+        }
+        // Radiance: skip GL debug callback registration
     }
 }

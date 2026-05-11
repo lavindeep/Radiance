@@ -29,7 +29,8 @@ public class MixinPlugin implements IMixinConfigPlugin {
         "com.radiance.mixins.vanilla_resource_tracker.NamespaceResourceManagerMixins",
         "com.radiance.mixins.vanilla_resource_tracker.TextureManagerMixins",
         "com.radiance.mixins.vanilla_resource_tracker.AbstractTextureMixins",
-        "com.radiance.mixins.vanilla_resource_tracker.NativeImageMixins"
+        "com.radiance.mixins.vanilla_resource_tracker.NativeImageMixins",
+        "com.radiance.mixins.vulkan_render_integration.GLXMixins"
     );
 
     @Override
