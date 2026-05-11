@@ -95,8 +95,8 @@ public class MinecraftClientMixins {
     }
 
     @Redirect(method = "<init>(Lnet/minecraft/client/RunArgs;)V",
-        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gl/Framebuffer;clear()V"))
-    public void cancelClear(Framebuffer instance) {
+        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gl/Framebuffer;clear(Z)V"))
+    public void cancelClear(Framebuffer instance, boolean getError) {
 
     }
 
@@ -149,8 +149,8 @@ public class MinecraftClientMixins {
     // endregion
 
     // region <onResolutionChanged>
-    @Redirect(method = "onResolutionChanged()V", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gl/Framebuffer;resize(II)V"))
-    public void cancelFramebufferResize(Framebuffer instance, int width, int height) {
+    @Redirect(method = "onResolutionChanged()V", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gl/Framebuffer;resize(IIZ)V"))
+    public void cancelFramebufferResize(Framebuffer instance, int width, int height, boolean getError) {
 
     }
     // endregion

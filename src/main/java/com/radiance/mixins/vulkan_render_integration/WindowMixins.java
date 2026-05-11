@@ -145,31 +145,9 @@ public class WindowMixins {
         return null;
     }
 
-    @Redirect(method =
-        "<init>(Lnet/minecraft/client/WindowEventHandler;Lnet/minecraft/client/util/MonitorTracker;"
-            +
-            "Lnet/minecraft/client/WindowSettings;Ljava/lang/String;Ljava/lang/String;)V",
-        at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/RenderSystem;maxSupportedTextureSize()I", remap = false))
-    public int cancelGetMaxSupportedTextureSize() {
-        if (!RadianceState.isRendererPathActive()) {
-            return RenderSystem.maxSupportedTextureSize();
-        }
-        return 0;
-    }
-
-    @Redirect(method =
-        "<init>(Lnet/minecraft/client/WindowEventHandler;Lnet/minecraft/client/util/MonitorTracker;"
-            +
-            "Lnet/minecraft/client/WindowSettings;Ljava/lang/String;Ljava/lang/String;)V",
-        at = @At(value = "INVOKE", target = "Lorg/lwjgl/glfw/GLFW;glfwSetWindowSizeLimits(JIIII)V", remap = false))
-    public void cancelGetMaxSupportedTextureSize(long window, int minwidth, int minheight,
-        int maxwidth, int maxheight) {
-        if (!RadianceState.isRendererPathActive()) {
-            GLFW.glfwSetWindowSizeLimits(window, minwidth, minheight, maxwidth, maxheight);
-            return;
-        }
-        // Don't allow user to set window size manually
-    }
+    // Note: 1.21+ Window.<init> calls RenderSystem.maxSupportedTextureSize() and
+    // GLFW.glfwSetWindowSizeLimits() during construction. Neither exists in 1.20.1's Window —
+    // both redirects removed.
 
     @Inject(method = "onFramebufferSizeChanged(JII)V",
         at = @At(value = "INVOKE", target = "Lnet/minecraft/client/WindowEventHandler;onResolutionChanged()V"))
