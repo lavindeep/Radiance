@@ -36,7 +36,29 @@ public abstract class RenderSystemMixins {
         cir.setReturnValue(maxImageSize);
     }
 
-    // TODO(checkpoint-c): re-add setShader hook against 1.20.1's setShader(Supplier<ShaderProgram>) signature
+    /**
+     * 1.20.1's {@code RenderSystem.setShader(Supplier<net.minecraft.client.gl.ShaderProgram>)}.
+     * When vanilla swaps active shaders we tell MCVR's pipeline manager to bind the matching
+     * Vulkan pipeline. The proper shader-name -> pipeline-type mapping table is deferred:
+     * for now we route every shader to pipeline 0 (default overlay pipeline). MCVR ignores
+     * unknown pipeline ids and falls back to its default, so this is safe; the important
+     * thing is that {@code bindOverlayPipeline} is called once per shader swap so the C++
+     * side knows a state change happened before the next drawOverlay arrives.
+     *
+     * Note 1.20.1 uses {@code net.minecraft.client.gl.ShaderProgram} (NOT {@code Shader} like
+     * pre-1.17 or {@code ShaderProgramKey} like 1.21+).
+     *
+     * TODO(checkpoint-c+): build a shader-name -> Radiance pipeline-type lookup
+     * (position_tex / position_color_tex -> textured, position_color -> solid, etc.).
+     */
+    @Inject(method = "setShader(Ljava/util/function/Supplier;)V",
+        at = @At("HEAD"), remap = false)
+    private static void radianceSetShader(
+        java.util.function.Supplier<net.minecraft.client.gl.ShaderProgram> supplier,
+        org.spongepowered.asm.mixin.injection.callback.CallbackInfo ci) {
+        if (!RadianceState.isRendererActive()) return;
+        RendererProxy.bindOverlayPipeline(0);
+    }
 
     @Redirect(method = "flipFrame(J)V",
         at = @At(value = "INVOKE", target = "Lorg/lwjgl/glfw/GLFW;glfwSwapBuffers(J)V", remap = false))

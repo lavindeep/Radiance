@@ -40,7 +40,8 @@ public class MixinPlugin implements IMixinConfigPlugin {
         // Once the C++ crash is fixed these stay permanent (Step 4 promotion).
         "com.radiance.mixins.vulkan_render_integration.WindowMixins",
         "com.radiance.mixins.vulkan_render_integration.MinecraftClientMixins",
-        "com.radiance.mixins.vulkan_render_integration.RenderSystemMixins"
+        "com.radiance.mixins.vulkan_render_integration.RenderSystemMixins",
+        "com.radiance.mixins.vulkan_render_integration.BufferRendererMixins"
     );
 
     @Override

@@ -27,12 +27,14 @@ class MixinPluginTest {
     @Test
     void renderIntegrationMixinsAreNotYetEnabled() {
         MixinPlugin plugin = new MixinPlugin();
+        // Mixins that are loaded structurally by radiance.mixins.json but kept out of the
+        // ENABLED_MIXINS allowlist until their 1.20.1 port lands.
         assertFalse(plugin.shouldApplyMixin(
             "anyTarget",
             "com.radiance.mixins.vulkan_render_integration.WorldRendererCoreMixins"));
         assertFalse(plugin.shouldApplyMixin(
             "anyTarget",
-            "com.radiance.mixins.vulkan_render_integration.MinecraftClientMixins"));
+            "com.radiance.mixins.vulkan_render_integration.DrawContextMixins"));
     }
 
     @Test

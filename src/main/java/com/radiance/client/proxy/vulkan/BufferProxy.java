@@ -6,11 +6,13 @@ import static org.lwjgl.system.MemoryStack.stackPush;
 import static org.lwjgl.system.MemoryUtil.memAddress;
 import static org.lwjgl.system.MemoryUtil.memSet;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.radiance.client.proxy.buffer.RadianceBufferHandle;
 import com.radiance.client.texture.TextureTracker;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.Map;
+import net.minecraft.client.MinecraftClient;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.lwjgl.system.MemoryStack;
@@ -73,10 +75,11 @@ public class BufferProxy {
 
     public static native void updateOverlayDrawUniform(long ptr);
 
-    // TODO(checkpoint-d): rewrite for 1.20.1 yarn (was using net.minecraft.client.render.Fog,
-    // which doesn't exist in 1.20.1 — fog is exposed as discrete RenderSystem.getShaderFogStart/
-    // getShaderFogEnd/getShaderFogColor/getShaderFogShape). Re-enable when GuiRender mixins land.
-    /*
+    /**
+     * 1.20.1 port: the Fog struct/type does not exist in 1.20.1. Fog state is exposed via
+     * discrete RenderSystem getters (getShaderFogStart/End/Color/Shape). Layout below must
+     * remain byte-compatible with the 336-byte struct MCVR's native side reads.
+     */
     public static void updateOverlayDrawUniform() {
         try (MemoryStack stack = stackPush()) {
             int size = 336;
@@ -108,20 +111,19 @@ public class BufferProxy {
             bb.putFloat(baseAddr, shaderGlintAlpha);
             baseAddr += Float.BYTES;
 
-            Fog fog = RenderSystem.getShaderFog();
-            float fogStart = fog.start();
+            float fogStart = RenderSystem.getShaderFogStart();
             bb.putFloat(baseAddr, fogStart);
             baseAddr += Float.BYTES;
 
-            float fogEnd = fog.end();
+            float fogEnd = RenderSystem.getShaderFogEnd();
             bb.putFloat(baseAddr, fogEnd);
             baseAddr += Float.BYTES;
 
-            int fogShape = fog.shape().getId();
+            int fogShape = RenderSystem.getShaderFogShape().getId();
             bb.putInt(baseAddr, fogShape);
             baseAddr += Integer.BYTES;
 
-            float[] fogColor = {fog.red(), fog.green(), fog.blue(), fog.alpha()};
+            float[] fogColor = RenderSystem.getShaderFogColor();
             for (int i = 0; i < 4; i++) {
                 bb.putFloat(baseAddr, fogColor[i]);
                 baseAddr += Float.BYTES;
@@ -159,7 +161,6 @@ public class BufferProxy {
             updateOverlayDrawUniform(addr);
         }
     }
-    */
 
     public static native void updateOverlayPostUniform(long ptr);
 
