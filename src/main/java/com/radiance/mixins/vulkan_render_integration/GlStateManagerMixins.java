@@ -20,7 +20,7 @@ public class GlStateManagerMixins {
         cancellable = true,
         remap = false)
     private static void redirectActiveTexture(int texture, CallbackInfo ci) {
-        if (!RadianceState.isRendererPathActive()) return;
+        if (!RadianceState.isRendererActive()) return;
         ci.cancel();
     }
 
@@ -32,7 +32,7 @@ public class GlStateManagerMixins {
         cancellable = true,
         remap = false)
     private static void redirectDisableScissorTest(CallbackInfo ci) {
-        if (!RadianceState.isRendererPathActive()) return;
+        if (!RadianceState.isRendererActive()) return;
         PipelineStateProxy.ViewportState.setScissorEnabled(false);
         ci.cancel();
     }
@@ -44,7 +44,7 @@ public class GlStateManagerMixins {
         cancellable = true,
         remap = false)
     private static void redirectEnableScissorTest(CallbackInfo ci) {
-        if (!RadianceState.isRendererPathActive()) return;
+        if (!RadianceState.isRendererActive()) return;
         PipelineStateProxy.ViewportState.setScissorEnabled(true);
         ci.cancel();
     }
@@ -56,7 +56,7 @@ public class GlStateManagerMixins {
         cancellable = true,
         remap = false)
     private static void redirectScissorBox(int x, int y, int width, int height, CallbackInfo ci) {
-        if (!RadianceState.isRendererPathActive()) return;
+        if (!RadianceState.isRendererActive()) return;
         PipelineStateProxy.ViewportState.setScissor(x, y, width, height);
         ci.cancel();
     }
@@ -68,7 +68,7 @@ public class GlStateManagerMixins {
         cancellable = true,
         remap = false)
     private static void redirectViewport(int x, int y, int width, int height, CallbackInfo ci) {
-        if (!RadianceState.isRendererPathActive()) return;
+        if (!RadianceState.isRendererActive()) return;
         PipelineStateProxy.ViewportState.setViewport(x, y, width, height);
         ci.cancel();
     }
@@ -80,7 +80,7 @@ public class GlStateManagerMixins {
         cancellable = true,
         remap = false)
     private static void redirectDisableBlend(CallbackInfo ci) {
-        if (!RadianceState.isRendererPathActive()) return;
+        if (!RadianceState.isRendererActive()) return;
         PipelineStateProxy.ColorBlendState.setBlendEnable(false);
         ci.cancel();
     }
@@ -90,7 +90,7 @@ public class GlStateManagerMixins {
         cancellable = true,
         remap = false)
     private static void redirectEnableBlend(CallbackInfo ci) {
-        if (!RadianceState.isRendererPathActive()) return;
+        if (!RadianceState.isRendererActive()) return;
         PipelineStateProxy.ColorBlendState.setBlendEnable(true);
         ci.cancel();
     }
@@ -100,7 +100,7 @@ public class GlStateManagerMixins {
         cancellable = true,
         remap = false)
     private static void redirectBlendFunc(int srcFactor, int dstFactor, CallbackInfo ci) {
-        if (!RadianceState.isRendererPathActive()) return;
+        if (!RadianceState.isRendererActive()) return;
         PipelineStateProxy.ColorBlendState.glSetBlendFuncCombined(srcFactor, dstFactor);
         ci.cancel();
     }
@@ -114,7 +114,7 @@ public class GlStateManagerMixins {
         int srcFactorAlpha,
         int dstFactorAlpha,
         CallbackInfo ci) {
-        if (!RadianceState.isRendererPathActive()) return;
+        if (!RadianceState.isRendererActive()) return;
         PipelineStateProxy.ColorBlendState.glSetBlendFuncSeparate(srcFactorRGB, srcFactorAlpha,
             dstFactorRGB, dstFactorAlpha);
         ci.cancel();
@@ -125,7 +125,7 @@ public class GlStateManagerMixins {
         cancellable = true,
         remap = false)
     private static void redirectBlendEquation(int mode, CallbackInfo ci) {
-        if (!RadianceState.isRendererPathActive()) return;
+        if (!RadianceState.isRendererActive()) return;
         PipelineStateProxy.ColorBlendState.glSetBlendOpCombined(mode);
         ci.cancel();
     }
@@ -136,7 +136,7 @@ public class GlStateManagerMixins {
         remap = false)
     private static void redirectBlendEquation(boolean red, boolean green, boolean blue,
         boolean alpha, CallbackInfo ci) {
-        if (!RadianceState.isRendererPathActive()) return;
+        if (!RadianceState.isRendererActive()) return;
         PipelineStateProxy.ColorBlendState.glSetColorWriteMask(red, green, blue, alpha);
         ci.cancel();
     }
@@ -146,7 +146,7 @@ public class GlStateManagerMixins {
         cancellable = true,
         remap = false)
     private static void redirectEnableColorLogicOp(CallbackInfo ci) {
-        if (!RadianceState.isRendererPathActive()) return;
+        if (!RadianceState.isRendererActive()) return;
         PipelineStateProxy.ColorBlendState.setColorLogicOpEnable(true);
         ci.cancel();
     }
@@ -156,7 +156,7 @@ public class GlStateManagerMixins {
         cancellable = true,
         remap = false)
     private static void redirectDisableColorLogicOp(CallbackInfo ci) {
-        if (!RadianceState.isRendererPathActive()) return;
+        if (!RadianceState.isRendererActive()) return;
         PipelineStateProxy.ColorBlendState.setColorLogicOpEnable(false);
         ci.cancel();
     }
@@ -166,7 +166,7 @@ public class GlStateManagerMixins {
         cancellable = true,
         remap = false)
     private static void redirectLogicOp(int op, CallbackInfo ci) {
-        if (!RadianceState.isRendererPathActive()) return;
+        if (!RadianceState.isRendererActive()) return;
         PipelineStateProxy.ColorBlendState.glSetColorLogicOp(op);
         ci.cancel();
     }
@@ -180,7 +180,7 @@ public class GlStateManagerMixins {
         cancellable = true,
         remap = false)
     private static void redirectDisableDepthTest(CallbackInfo ci) {
-        if (!RadianceState.isRendererPathActive()) return;
+        if (!RadianceState.isRendererActive()) return;
         PipelineStateProxy.DepthStencilState.setDepthTestEnable(false);
         ci.cancel();
     }
@@ -192,7 +192,7 @@ public class GlStateManagerMixins {
         cancellable = true,
         remap = false)
     private static void redirectEnableDepthTest(CallbackInfo ci) {
-        if (!RadianceState.isRendererPathActive()) return;
+        if (!RadianceState.isRendererActive()) return;
         PipelineStateProxy.DepthStencilState.setDepthTestEnable(true);
         ci.cancel();
     }
@@ -204,7 +204,7 @@ public class GlStateManagerMixins {
         cancellable = true,
         remap = false)
     private static void redirectDepthFunc(int func, CallbackInfo ci) {
-        if (!RadianceState.isRendererPathActive()) return;
+        if (!RadianceState.isRendererActive()) return;
         PipelineStateProxy.DepthStencilState.glSetDepthCompareOp(func);
         ci.cancel();
     }
@@ -214,7 +214,7 @@ public class GlStateManagerMixins {
         cancellable = true,
         remap = false)
     private static void redirectDepthMask(boolean mask, CallbackInfo ci) {
-        if (!RadianceState.isRendererPathActive()) return;
+        if (!RadianceState.isRendererActive()) return;
         PipelineStateProxy.DepthStencilState.setDepthWriteEnable(mask);
         ci.cancel();
     }
@@ -224,7 +224,7 @@ public class GlStateManagerMixins {
         cancellable = true,
         remap = false)
     private static void redirectStencilFunc(int func, int ref, int mask, CallbackInfo ci) {
-        if (!RadianceState.isRendererPathActive()) return;
+        if (!RadianceState.isRendererActive()) return;
         PipelineStateProxy.DepthStencilState.glSetStencilFunc(func, ref, mask);
         ci.cancel();
     }
@@ -234,7 +234,7 @@ public class GlStateManagerMixins {
         cancellable = true,
         remap = false)
     private static void redirectStencilMask(int mask, CallbackInfo ci) {
-        if (!RadianceState.isRendererPathActive()) return;
+        if (!RadianceState.isRendererActive()) return;
         PipelineStateProxy.DepthStencilState.vkSetStencilWriteMask(mask);
         ci.cancel();
     }
@@ -244,7 +244,7 @@ public class GlStateManagerMixins {
         cancellable = true,
         remap = false)
     private static void redirectStencilMask(int sfail, int dpfail, int dppass, CallbackInfo ci) {
-        if (!RadianceState.isRendererPathActive()) return;
+        if (!RadianceState.isRendererActive()) return;
         PipelineStateProxy.DepthStencilState.glSetStencilOp(sfail, dpfail, dppass);
         ci.cancel();
     }
@@ -256,7 +256,7 @@ public class GlStateManagerMixins {
         cancellable = true,
         remap = false)
     private static void redirectEnableCull(CallbackInfo ci) {
-        if (!RadianceState.isRendererPathActive()) return;
+        if (!RadianceState.isRendererActive()) return;
         PipelineStateProxy.RasterizationState.glSetCullMode(GL11.GL_BACK);
         ci.cancel();
     }
@@ -266,7 +266,7 @@ public class GlStateManagerMixins {
         cancellable = true,
         remap = false)
     private static void redirectDisableCull(CallbackInfo ci) {
-        if (!RadianceState.isRendererPathActive()) return;
+        if (!RadianceState.isRendererActive()) return;
         PipelineStateProxy.RasterizationState.vkSetCullMode(
             VulkanConstants.VkCullMode.VK_CULL_MODE_NONE.getValue());
         ci.cancel();
@@ -277,7 +277,7 @@ public class GlStateManagerMixins {
         cancellable = true,
         remap = false)
     private static void redirectPolygonMode(int face, int mode, CallbackInfo ci) {
-        if (!RadianceState.isRendererPathActive()) return;
+        if (!RadianceState.isRendererActive()) return;
         /*
           @Warning no vulkan equivalent implementation
          */
@@ -290,7 +290,7 @@ public class GlStateManagerMixins {
         cancellable = true,
         remap = false)
     private static void redirectEnablePolygonOffset(CallbackInfo ci) {
-        if (!RadianceState.isRendererPathActive()) return;
+        if (!RadianceState.isRendererActive()) return;
         PipelineStateProxy.RasterizationState.glSetPolygonOffsetEnable(GL11.GL_FILL, true);
         ci.cancel();
     }
@@ -300,7 +300,7 @@ public class GlStateManagerMixins {
         cancellable = true,
         remap = false)
     private static void redirectDisablePolygonOffset(CallbackInfo ci) {
-        if (!RadianceState.isRendererPathActive()) return;
+        if (!RadianceState.isRendererActive()) return;
         PipelineStateProxy.RasterizationState.glSetPolygonOffsetEnable(GL11.GL_FILL, false);
         ci.cancel();
     }
@@ -310,7 +310,7 @@ public class GlStateManagerMixins {
         cancellable = true,
         remap = false)
     private static void redirectPolygonOffset(float factor, float units, CallbackInfo ci) {
-        if (!RadianceState.isRendererPathActive()) return;
+        if (!RadianceState.isRendererActive()) return;
         PipelineStateProxy.RasterizationState.glSetPolygonOffset(factor, units);
         ci.cancel();
     }
@@ -323,7 +323,7 @@ public class GlStateManagerMixins {
         remap = false)
     private static void redirectClearColor(float red, float green, float blue, float alpha,
         CallbackInfo ci) {
-        if (!RadianceState.isRendererPathActive()) return;
+        if (!RadianceState.isRendererActive()) return;
         PipelineStateProxy.ClearState.setClearColor(red, green, blue, alpha);
         ci.cancel();
     }
@@ -333,7 +333,7 @@ public class GlStateManagerMixins {
         cancellable = true,
         remap = false)
     private static void redirectClearDepth(double depth, CallbackInfo ci) {
-        if (!RadianceState.isRendererPathActive()) return;
+        if (!RadianceState.isRendererActive()) return;
         PipelineStateProxy.ClearState.setClearDepth(depth);
         ci.cancel();
     }
@@ -343,7 +343,7 @@ public class GlStateManagerMixins {
         cancellable = true,
         remap = false)
     private static void redirectClearStencil(int stencil, CallbackInfo ci) {
-        if (!RadianceState.isRendererPathActive()) return;
+        if (!RadianceState.isRendererActive()) return;
         PipelineStateProxy.ClearState.setClearStencil(stencil);
         ci.cancel();
     }
@@ -355,7 +355,7 @@ public class GlStateManagerMixins {
         cancellable = true,
         remap = false)
     private static void redirectClear(int mask, CallbackInfo ci) {
-        if (!RadianceState.isRendererPathActive()) return;
+        if (!RadianceState.isRendererActive()) return;
         DrawCommandProxy.Overlay.glClear(mask);
         ci.cancel();
     }
@@ -363,7 +363,7 @@ public class GlStateManagerMixins {
 
     @Redirect(method = "_getString(I)Ljava/lang/String;", at = @At(value = "INVOKE", target = "Lorg/lwjgl/opengl/GL11;glGetString(I)Ljava/lang/String;", remap = false))
     private static String redirectGetString(int name) {
-        if (!RadianceState.isRendererPathActive()) {
+        if (!RadianceState.isRendererActive()) {
             return GL11.glGetString(name);
         }
         return "Vulkan 1.4";
